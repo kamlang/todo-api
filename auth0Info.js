@@ -15,14 +15,13 @@ const options = {
     audience: process.env.AUTH0_DOMAIN + 'api/v2/'
   }
 };
-
-  response = await axios.request(options)
   try {
-    await writeFile('token.json', response.data, 'utf8');
-    return response.data.access_token
+    response = await axios.request(options)
+    console.log(response)
+    await writeFile('token.json',JSON.stringify(response.data),'utf8')
   } catch (error) {
     console.error(error)
-    throw "Fetching new access token failed."
+    throw new Error("Fetching new access token failed.")
   }
 }
 
@@ -33,7 +32,7 @@ async function getTokenFromFile() {
     return data.access_token
   } catch(error) {
     console.log(error)
-    throw "Couldn't get token.json file."
+    throw new Error("Couldn't get token.json file.")
   }
 }
 
@@ -44,25 +43,24 @@ async function getAccessToken() {
     accessToken = await getTokenFromFile()
     return accessToken
   } catch (error) {
-    console.error("Error happend fetching token from file, creating token.json.")
+    throw error
   }
 
   try {
     accessToken = await getNewToken()
     return accessToken
   } catch (error) {
-    console.error(error)
+    throw error
   }
 }
 
-async function getUserInfo (auth0Sub) {
+async function getCurrentUserInfo (auth0Sub) {
   let accessToken
 
   try {
     accessToken = await getAccessToken()
   } catch (error) {
-    console.error(error)
-    throw "Couldn't get valid access token"
+    throw error
   }
 
   const options = {
@@ -70,22 +68,25 @@ async function getUserInfo (auth0Sub) {
     url: process.env.AUTH0_DOMAIN + 'api/v2/users/' + auth0Sub,
     headers: {'content-type': 'application/json', authorization: 'Bearer ' + accessToken}
   };
+
   try {
-    response = await axios.request(options)
+    const response = await axios.request(options)
     return response.data
   } catch (error) {
-    console.error(error)
 
-    if (response.data.statusCode == 401) {
+    if (error.response.status == 401) {
       try {
+          console.log("Token has expired, getting a new one.")
           await getNewToken()
-          await getUserInfo(auth0Sub)
+          await getCurrentUserInfo(auth0Sub)
         } catch (error) {
           console.error(error)
+          throw error
         }
     }
-    throw "Fetching User info failed."
+    console.error(error)
+    throw new Error("Fetching User info failed.")
   }
 }
 
-module.exports = getUserInfo
+module.exports = getCurrentUserInfo

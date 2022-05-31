@@ -5,13 +5,13 @@ const port = process.env.PORT || 8080;
 const mongoose = require('mongoose');
 require('dotenv').config()
 const getCurrentUserInfo = require('./auth0Info')
-const {Todo,User} = require('./models')
+const {Task, TaskList, User} = require('./models')
 const app = express();
 
 
 mongoose.connect(process.env.DATABASE_URL)
 
-const jwtCheck = jwt({
+const jwkcheck = jwt({
       secret: jwks.expressJwtSecret({
           cache: true,
           rateLimit: true,
@@ -23,14 +23,25 @@ const jwtCheck = jwt({
     algorithms: ['RS256']
 });
 
-app.use(jwtCheck);
+
+app.use(jwkcheck)
 app.use(express.json())
 
-app.use(function(req, res, next) {
+app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "http://localhost:3000");
   res.header("Access-Control-Allow-Headers", "Authorization, Origin, X-Requested-With, Content-Type, Accept");
   res.header('Access-Control-Allow-Methods', 'GET, POST, PATCH, PUT, DELETE, OPTIONS')
   next();
+});
+
+
+app.use((err, req, res, next) => {
+  if (err.name === "UnauthorizedError") {
+    res.status(401)
+    res.end() 
+  } else {
+    next(err);
+  }
 });
 
 app.use((req, res, next) => {
@@ -44,7 +55,7 @@ async function createUser(auth0Sub) {
     userInfo = await getCurrentUserInfo(auth0Sub)
   } catch (error) {
     console.error(error)
-    throw error
+    throw new Error("Stopping here couldn't get user info.")
   }
 
   try {
@@ -57,94 +68,167 @@ async function createUser(auth0Sub) {
     return newUser
   } catch (error) {
     console.error(error)
+    throw new Error("Creating user failed.")
    }
 }
 
 async function getCurrentUser(req, res, next) {
   let auth0Sub = req.auth.sub
-  let currentUser = await User.findOne({sub: auth0Sub})
+  let currentUser
+  try {
+    currentUser = await User.findOne({sub: auth0Sub})
+  } catch (error) {
+    res.status(500)
+    res.end()
+  }
   if (!currentUser) {
     console.log("User not found, creating it.")
-    currentUser = await createUser(auth0Sub)
+    try {
+      currentUser = await createUser(auth0Sub)
+    } catch(error) {
+      console.error(error)
+      res.status(500)
+      res.end()
+    }
   }
   res.currentUser = currentUser
   next()
 }
 
 app.put('/addTask', getCurrentUser, async function(req, res) {
-
+// Done
   try {
-    todo = await Todo.create({
-      author: res.currentUser._id,
+    const newTask = await Task.create({
       body: req.body.body,
-      completed: false
-      name: req.body.name
+      dueDate: req.body.dueDate
     })
-    res.status(201).json(todo)
-    res.end()
+    const tl = await TaskList.findOne({author: res.currentUser._id,
+      name: req.body.name})
+    await tl.tasks.push(newTask._id)
+    tl.save()
+    console.log(tl)
+    res.status(201).json(newTask)
   } catch(error) {
     console.error(error)
-    console.error("Unable to create task.")
-    res.status(500).json({message: "Something went wrong. Unable to create task."})
-    res.end()
+    if (error.name == "ValidationError") {
+      res.status(422).json({"message": "Task cannot be empty."})
+      res.end()
+    }
+    res.status(500)
   }
+    res.end()
 })
 
 app.patch('/updateTask', getCurrentUser, async function(req, res) {
+  //Done
   const options = { runValidators: true };
 
   try {
-    todo = await Todo.findOneAndUpdate({
+    const task = await Task.findOneAndUpdate({
       _id: req.body._id, author: res.currentUser._id },
-      req.body, options
+      req.body, options,
     )
-    res.status(201).json({message : "Task has been updated successfully."})
-    res.end()
+    res.status(201)
   } catch(error) {
     console.error(error)
-    console.error("Unable to update task.")
-    res.status(500).json({message: "Something went wrong. Unable to update task."})
-    res.end()
+    if (error.name == "ValidationError") {
+      res.status(422).json({"message": "Task cannot be empty."})
+      res.end()
+    }
+    res.status(500)
   }
-})
-
-
-app.get('/getTodos', getCurrentUser, async function(req, res) {
-  res.json(res.currentUser.todos)
     res.end()
 })
-app.get('/getTasks', getCurrentUser, async function(req, res) {
 
+
+app.post('/getTasks', getCurrentUser, async function(req, res) {
+// Done
   try {
-    let tasks = await Todo.find({author: res.currentUser._id, name: req.body.name})
-      .populate("author","-sub -_id -__v")
-      .select("-__v")
-      .sort([['createdAt', -1]])
+    const tasks = await TaskList.findOne({author: res.currentUser._id, name: req.body.name},'tasks -_id')
+      .populate({path: "tasks",select: "createdAt dueDate body completed _id", options: { sort: {'createdAt': -1}}})
       .exec()
-    res.json(tasks)
-    res.end()
+    console.log(tasks)
+    res.json(tasks.tasks)
   } catch(error) {
+    console.log(error)
     console.error("Unable to get tasks.")
-    res.status(500).json({message: "Something went wrong. Unable to get tasks."})
-    res.end()
+    res.status(500)
   }
+    res.end()
 })
 
 app.delete('/deleteTask', getCurrentUser, async function(req, res) {
-
+  // Done
   try {
-    todo = await Todo.findOneAndDelete({
+    await Task.findOneAndDelete({
       _id: req.body._id, author: res.currentUser._id }
     )
-    res.status(201)
-    res.end()
-    console.log("Task removed")
+    res.status(200)
   } catch(error) {
-    console.error(error)
-    console.error("Unable to delete task.")
     res.status(500)
-    res.end()
   }
+    res.end()
+})
+
+app.delete('/deleteTaskList', getCurrentUser, async function(req, res) {
+// Done
+  try {
+    const selectedTaskList = await TaskList.findOne({ author: res.currentUser._id, name: req.body.name })
+    await selectedTaskList.deleteOne()
+    res.status(200)
+  } catch (error) {
+    console.log(error)
+    res.status(500)
+  }
+  res.end()
+})
+
+app.get('/getTaskList', getCurrentUser, async function(req, res) {
+  const tasks = await TaskList.find({author: res.currentUser._id},'name -_id')
+  res.json(tasks)
+  res.end()
+})
+
+
+app.patch('/updateTaskList', getCurrentUser, async function(req, res) {
+  try {
+    await TaskList.findOneAndUpdate({ author: res.currentUser._id, name: req.body.name },{name: req.body.newName})
+    res.status(204)
+  } catch (error) {
+ console.error(error)
+    if (error.name == "ValidationError") {
+      res.status(422).json({"message": "Task list name cannot be empty"})
+      res.end()
+    } else if (error.code == "11000") {
+      res.status(409).json({"message": "You already have a task list with that name, please choose another one."})
+      res.end()
+    }
+
+    res.status(500)
+  }
+  res.end()
+})
+app.put('/createTaskList', getCurrentUser, async function(req, res) {
+  // Done
+  try {
+    const newTaskList = await TaskList.create({
+      author: res.currentUser._id,
+      name: req.body.name
+    })
+    res.status(201).json(newTaskList)
+  } catch (error) {
+    console.error(error)
+    if (error.name == "ValidationError") {
+      res.status(422).json({"message": "Task list name cannot be empty"})
+      res.end()
+    } else if (error.code == "11000") {
+      res.status(409).json({"message": "You already have a task list with that name, please choose another one."})
+      res.end()
+    }
+
+    res.status(500)
+  }
+  res.end()
 })
 
 app.listen(port);

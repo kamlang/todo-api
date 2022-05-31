@@ -1,27 +1,44 @@
 const mongoose = require('mongoose')
 const { Schema } = mongoose;
 
-const todoSchema = new Schema({
-  author: { 
-    type: Schema.Types.ObjectId,
-    ref: 'User' ,
-    immutable: true 
-  },
+const taskSchema = new Schema({
   body: {
     type: String,
-    minLength : 5
+    minLength : 1
   },
   createdAt: { 
     type: Date, 
     default: Date.now,
     immutable: true 
   },
-  completed: Boolean,
+  completed: {
+    type: Boolean,
+    default: false
+  },
+  dueDate: Date
+});
+
+const taskListSchema = new Schema({
+  author: { 
+    type: Schema.Types.ObjectId,
+    ref: 'User' ,
+    immutable: true 
+  },
   name: {
-    type: String
-    minLength : 1
-    default : "main"
+    type: String,
+    minLength : 1,
+    default : "Main",
+    unique: true
+  },
+  tasks:{
+    type: [Schema.Types.ObjectId],
+    ref: 'Task'
   }
+})
+
+taskListSchema.pre('deleteOne',{document:true}, async function(next) {
+  await Task.deleteMany({ _id: {$in: this.tasks}})
+  next();
 });
 
 const userSchema = new Schema({
@@ -39,18 +56,14 @@ const userSchema = new Schema({
     default: Date.now,
     immutable: true
   },
-  todos: [todoSchema]
 })
 
-const project = new Schema({
-
-})
-
-
-const Todo = mongoose.model('Todo', todoSchema);
+const Task = mongoose.model('Task', taskSchema);
 const User = mongoose.model('User', userSchema);
+const TaskList = mongoose.model('TaskList', taskListSchema);
 
 module.exports = { 
-  "Todo" : Todo,
+  "Task" : Task,
+  "TaskList" : TaskList,
   "User" : User
 }
