@@ -15,7 +15,7 @@ const taskSchema = new Schema({
     type: Boolean,
     default: false
   },
-  dueDate: Date
+  dueDate: Date,
 });
 
 const taskListSchema = new Schema({
@@ -27,7 +27,6 @@ const taskListSchema = new Schema({
   name: {
     type: String,
     minLength : 1,
-    default : "Main",
     unique: true
   },
   tasks:{
@@ -38,8 +37,10 @@ const taskListSchema = new Schema({
 
 taskListSchema.pre('deleteOne',{document:true}, async function(next) {
   await Task.deleteMany({ _id: {$in: this.tasks}})
+//  await User.findOneAndUpdate({ _id: this.author}, {taskLists: {$pull: this._id}})
   next();
 });
+
 
 const userSchema = new Schema({
   sub: {
@@ -56,6 +57,10 @@ const userSchema = new Schema({
     default: Date.now,
     immutable: true
   },
+  taskLists: {
+    type: [Schema.Types.ObjectId],
+    ref: 'TaskList'
+  }
 })
 
 const Task = mongoose.model('Task', taskSchema);
