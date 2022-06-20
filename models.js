@@ -6,6 +6,7 @@ const taskSchema = new Schema({
     type: String,
     minLength : 1
   },
+  title: String,
   createdAt: { 
     type: Date, 
     default: Date.now,
@@ -36,7 +37,9 @@ const taskListSchema = new Schema({
 })
 
 taskListSchema.pre('deleteOne',{document:true}, async function(next) {
-  await Task.deleteMany({ _id: {$in: this.tasks}})
+  let res = await Task.deleteMany({ _id: {$in: this.tasks}})
+  console.log(res)
+
 //  await User.findOneAndUpdate({ _id: this.author}, {taskLists: {$pull: this._id}})
   next();
 });

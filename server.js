@@ -1,4 +1,5 @@
 const express = require('express');
+const fs = require('fs');
 const { expressjwt: jwt } = require("express-jwt");
 const jwks = require('jwks-rsa');
 const port = process.env.PORT || 8080;
@@ -6,7 +7,15 @@ const mongoose = require('mongoose');
 require('dotenv').config()
 const getCurrentUserInfo = require('./auth0Info')
 const {Task, TaskList, User} = require('./models')
-const app = express();
+const privateKey  = fs.readFileSync('certs/key.pem', 'utf8');
+const certificate = fs.readFileSync('certs/cert.pem', 'utf8');
+const credentials = {key: privateKey, cert: certificate};
+const http = require('http');
+const https = require('https');
+const morgan = require('morgan')
+const path = require('path')
+var rfs = require('rotating-file-stream')
+const app = express()
 
 
 mongoose.connect(process.env.DATABASE_URL)
@@ -23,12 +32,16 @@ const jwkcheck = jwt({
     algorithms: ['RS256']
 });
 
-
+const accessLogStream = rfs.createStream('access.log', {
+  interval: '1d', // rotate daily
+  path: path.join(__dirname, 'log')
+})
+app.use(morgan('combined', { stream: accessLogStream }))
 app.use(jwkcheck)
 app.use(express.json())
 
 app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "http://localhost:3000");
+  res.header("Access-Control-Allow-Origin", "https://192.168.1.6:3000");
   res.header("Access-Control-Allow-Headers", "Authorization, Origin, X-Requested-With, Content-Type, Accept");
   res.header('Access-Control-Allow-Methods', 'GET, POST, PATCH, PUT, DELETE, OPTIONS')
   next();
@@ -43,6 +56,8 @@ app.use((err, req, res, next) => {
     next(err);
   }
 });
+
+
 
 app.use((req, res, next) => {
   console.log('Time:', Date.now())
@@ -100,6 +115,7 @@ app.put('/addTask', getCurrentUser, async function(req, res) {
   try {
     const newTask = await Task.create({
       body: req.body.body,
+      title: req.body.title,
       dueDate: req.body.dueDate
     })
     const tl = await TaskList.findOne({author: res.currentUser._id,
@@ -144,7 +160,7 @@ app.post('/getTasks', getCurrentUser, async function(req, res) {
   try {
     const tasks = await TaskList.findOne({author: res.currentUser._id, name: req.body.name},'tasks -_id')
 //      .populate({path: "tasks",select: "createdAt dueDate body completed _id", options: { sort: {'createdAt': -1}}})
-      .populate({path: "tasks",select: "createdAt dueDate body completed _id"})
+      .populate({path: "tasks",select: "title createdAt dueDate body completed _id"})
       .exec()
     res.json(tasks.tasks)
   } catch(error) {
@@ -180,10 +196,10 @@ app.delete('/deleteTaskList', getCurrentUser, async function(req, res) {
 
 app.get('/getTaskList', getCurrentUser, async function(req, res) {
 //  const tasks = await TaskList.find({author: res.currentUser._id},'name -_id')
-  const tasks = await User.findOne({id: res.currentUser._id},'taskLists -_id')
-      .populate({path: "taskLists",select: "name _id tasks"})
+  const tasks = await User.findOne({_id: res.currentUser._id},'taskLists -_id')
+      .populate({path: "taskLists",select: {name:1,  _id: 1,  tasks: 1}, 
+        populate: {path: "tasks", select: {completed :1}}})
       .exec()
-  console.log(tasks.taskList)
   res.json(tasks.taskLists)
   res.end()
 })
@@ -259,5 +275,8 @@ app.put('/createTaskList', getCurrentUser, async function(req, res) {
   res.end()
 })
 
-app.listen(port);
+const httpServer = http.createServer(app);
+const httpsServer = https.createServer(credentials, app);
 
+httpServer.listen(8080);
+httpsServer.listen(8443,"192.168.1.6");
