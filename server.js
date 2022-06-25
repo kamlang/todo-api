@@ -141,7 +141,7 @@ app.patch('/updateTask', getCurrentUser, async function(req, res) {
   try {
     const task = await Task.findOneAndUpdate({
       _id: req.body._id, author: res.currentUser._id },
-      { body: req.body.body, dueDate: req.body.dueDate, completed:req.body.completed}, options,
+      { title: req.body.title, body: req.body.body, dueDate: req.body.dueDate, completed:req.body.completed}, options,
     )
     res.status(201)
   } catch(error) {
