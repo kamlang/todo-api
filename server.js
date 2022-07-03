@@ -57,13 +57,6 @@ app.use((err, req, res, next) => {
   }
 });
 
-
-
-app.use((req, res, next) => {
-  console.log('Time:', Date.now())
-  next()
-})
-
 async function createUser(auth0Sub) {
 
  try {
@@ -155,21 +148,6 @@ app.patch('/updateTask', getCurrentUser, async function(req, res) {
     res.end()
 })
 
-
-app.post('/getTasks', getCurrentUser, async function(req, res) {
-  try {
-    const tasks = await TaskList.findOne({author: res.currentUser._id, name: req.body.name},'tasks -_id')
-//      .populate({path: "tasks",select: "createdAt dueDate body completed _id", options: { sort: {'createdAt': -1}}})
-      .populate({path: "tasks",select: "title createdAt dueDate body completed _id"})
-      .exec()
-    res.json(tasks.tasks)
-  } catch(error) {
-    console.error("Unable to get tasks.")
-    res.status(500)
-  }
-    res.end()
-})
-
 app.delete('/deleteTask', getCurrentUser, async function(req, res) {
   try {
     await Task.findOneAndDelete({
@@ -198,7 +176,7 @@ app.get('/getTaskList', getCurrentUser, async function(req, res) {
 //  const tasks = await TaskList.find({author: res.currentUser._id},'name -_id')
   const tasks = await User.findOne({_id: res.currentUser._id},'taskLists -_id')
       .populate({path: "taskLists",select: {name:1,  _id: 1,  tasks: 1}, 
-        populate: {path: "tasks", select: {completed :1}}})
+        populate: {path: "tasks", select: {completed:1, dueDate:1, body:1, title:1}}})
       .exec()
   res.json(tasks.taskLists)
   res.end()
