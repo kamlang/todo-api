@@ -176,7 +176,7 @@ app.get('/getTaskList', getCurrentUser, async function(req, res) {
 //  const tasks = await TaskList.find({author: res.currentUser._id},'name -_id')
   const tasks = await User.findOne({_id: res.currentUser._id},'taskLists -_id')
       .populate({path: "taskLists",select: {name:1,  _id: 1,  tasks: 1}, 
-        populate: {path: "tasks", select: {completed:1, dueDate:1, body:1, title:1}}})
+        populate: {path: "tasks", select: { createdAt:1, completed:1, dueDate:1, body:1, title:1}}})
       .exec()
   res.json(tasks.taskLists)
   res.end()
@@ -256,5 +256,4 @@ app.put('/createTaskList', getCurrentUser, async function(req, res) {
 const httpServer = http.createServer(app);
 const httpsServer = https.createServer(credentials, app);
 
-httpServer.listen(8080);
 httpsServer.listen(8443,"192.168.1.6");
