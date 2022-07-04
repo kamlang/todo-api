@@ -115,7 +115,6 @@ app.put('/addTask', getCurrentUser, async function(req, res) {
       name: req.body.name})
     await tl.tasks.unshift(newTask._id)
     tl.save()
-    console.log(tl)
     res.status(201).json(newTask)
   } catch(error) {
     console.error(error)
@@ -201,7 +200,6 @@ app.patch('/updateTaskListOrder', getCurrentUser, async function(req, res) {
   Request will fail with 422 if task id is maliciously modified. */
     try {
     const result = await User.findOneAndUpdate({ author: res.currentUser._id, taskLists: {$all :req.body.taskLists} },{taskLists: req.body.taskLists})
-      console.log(result)
     result === null && await Promise.reject("Error: Unable to process")
     res.status(204)
   } catch (error) {
