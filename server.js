@@ -99,7 +99,7 @@ async function createUser(auth0Sub) {
 
 
 
-app.put('/addTask', getCurrentUser, async function (req, res) {
+app.put('/task', getCurrentUser, async function (req, res) {
   try {
     const newTask = await Task.create({
       body: req.body.body,
@@ -124,7 +124,7 @@ app.put('/addTask', getCurrentUser, async function (req, res) {
   res.end()
 })
 
-app.patch('/updateTask', getCurrentUser, async function (req, res) {
+app.patch('/task', getCurrentUser, async function (req, res) {
   const options = { runValidators: true };
 
   try {
@@ -145,7 +145,7 @@ app.patch('/updateTask', getCurrentUser, async function (req, res) {
   res.end()
 })
 
-app.delete('/deleteTask', getCurrentUser, async function (req, res) {
+app.delete('/task', getCurrentUser, async function (req, res) {
   try {
     await Task.findOneAndDelete({
       _id: req.body._id, author: res.currentUser._id
@@ -158,7 +158,7 @@ app.delete('/deleteTask', getCurrentUser, async function (req, res) {
   res.end()
 })
 
-app.delete('/deleteProject', getCurrentUser, async function (req, res) {
+app.delete('/project', getCurrentUser, async function (req, res) {
   try {
     const selectedTaskList = await TaskList.findOne({ author: res.currentUser._id, name: req.body.name })
     await selectedTaskList.deleteOne()
@@ -170,7 +170,7 @@ app.delete('/deleteProject', getCurrentUser, async function (req, res) {
   res.end()
 })
 
-app.get('/getProjects', getCurrentUser, async function (req, res) {
+app.get('/projects', getCurrentUser, async function (req, res) {
   const tasks = await User.findOne({ _id: res.currentUser._id }, 'taskLists -_id')
     .populate({
       path: "taskLists", select: { name: 1, _id: 1, tasks: 1 },
@@ -181,7 +181,7 @@ app.get('/getProjects', getCurrentUser, async function (req, res) {
   res.end()
 })
 
-app.patch('/updateTaskOrder', getCurrentUser, async function (req, res) {
+app.patch('/tasks', getCurrentUser, async function (req, res) {
   /* with $all: we're making sure that all tasks id provided in the request belong to this task list and to this user.
   Request will fail with 422 if task id is maliciously modified. */
   try {
@@ -196,7 +196,7 @@ app.patch('/updateTaskOrder', getCurrentUser, async function (req, res) {
   res.end()
 })
 
-app.patch('/updateProjectsOrder', getCurrentUser, async function (req, res) {
+app.patch('/projects', getCurrentUser, async function (req, res) {
   /* with $all: we're making sure that all tasks id provided in the request belong to this task list and to this user.
   Request will fail with 422 if task id is maliciously modified. */
   try {
@@ -211,7 +211,7 @@ app.patch('/updateProjectsOrder', getCurrentUser, async function (req, res) {
   res.end()
 })
 
-app.patch('/updateProject', getCurrentUser, async function (req, res) {
+app.patch('/project', getCurrentUser, async function (req, res) {
   try {
     await TaskList.findOneAndUpdate({ author: res.currentUser._id, name: req.body.oldName }, { name: req.body.newName })
     res.status(204)
@@ -229,7 +229,7 @@ app.patch('/updateProject', getCurrentUser, async function (req, res) {
   }
   res.end()
 })
-app.put('/addProject', getCurrentUser, async function (req, res) {
+app.put('/project', getCurrentUser, async function (req, res) {
   try {
     const newTaskList = await TaskList.create({
       author: res.currentUser._id,
