@@ -26,7 +26,7 @@ async function getNewToken() {
 
 async function getTokenFromFile() {
   try {
-    let data = await readFile('token.json', 'utf8')
+    let data = await readFile(process.env.TOKEN_FILE, 'utf8')
     data = JSON.parse(data)
     return data.access_token
   } catch (error) {
