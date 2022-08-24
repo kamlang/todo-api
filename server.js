@@ -12,8 +12,8 @@ require('dotenv').config()
 
 const app = express()
 mongoose.connect(process.env.DATABASE_URL)
-await waitPort({ host: process.env.DATABASE_HOST, port: 27017 })
-
+waitPort({ host: process.env.DATABASE_HOST, port: 27017 })
+  .then(mongoose.connect(process.env.DATABASE_URL))
 
 const privateKey = fs.readFileSync('certs/key.pem', 'utf8');
 const certificate = fs.readFileSync('certs/cert.pem', 'utf8');
@@ -113,7 +113,7 @@ app.put('/task', getCurrentUser, async function (req, res) {
       author: res.currentUser._id,
       name: req.body.name
     })
-        await tl.tasks.unshift(newTask._id)
+    //    await tl.tasks.unshift(newTask._id)
     tl.save()
     res.status(201).json(newTask)
   } catch (error) {
