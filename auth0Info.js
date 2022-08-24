@@ -30,7 +30,7 @@ async function getTokenFromFile() {
     data = JSON.parse(data)
     return data.access_token
   } catch (error) {
-    log.log(error)
+    log.error(error)
     throw new Error("Couldn't get token.json file.")
   }
 }
