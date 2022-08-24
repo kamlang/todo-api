@@ -18,6 +18,7 @@
     "jsonwebtoken": "^8.5.1",
     "jwks-rsa": "^2.1.2",
     "mongoose": "^6.3.3",
+    "morgan": "^1.10.0",
     "rotating-file-stream": "^3.0.4",
     "wait-port": "^0.3.0"
   },
