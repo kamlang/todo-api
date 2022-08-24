@@ -15,8 +15,8 @@ mongoose.connect(process.env.DATABASE_URL)
 waitPort({ host: process.env.DATABASE_HOST, port: 27017 })
   .then(mongoose.connect(process.env.DATABASE_URL))
 
-const privateKey = fs.readFileSync('certs/key.pem', 'utf8');
-const certificate = fs.readFileSync('certs/cert.pem', 'utf8');
+const privateKey = fs.readFileSync(process.env.KEY_FILE, 'utf8');
+const certificate = fs.readFileSync(process.env.CERT_FILE, 'utf8');
 const credentials = { key: privateKey, cert: certificate };
 
 const { expressjwt: jwt } = require("express-jwt");

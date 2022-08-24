@@ -17,7 +17,7 @@ async function getNewToken() {
   };
   try {
     response = await axios.request(options)
-    await writeFile('token.json', JSON.stringify(response.data), 'utf8')
+    await writeFile(process.env.TOKEN_FILE, JSON.stringify(response.data), 'utf8')
   } catch (error) {
     log.error(error)
     throw new Error("Fetching new access token failed.")
