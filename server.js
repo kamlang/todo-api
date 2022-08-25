@@ -113,7 +113,7 @@ app.put('/task', getCurrentUser, async function (req, res) {
       author: res.currentUser._id,
       name: req.body.name
     })
-    //    await tl.tasks.unshift(newTask._id)
+    await tl.tasks.unshift(newTask._id)
     tl.save()
     res.status(201).json(newTask)
   } catch (error) {
@@ -257,4 +257,4 @@ app.put('/project', getCurrentUser, async function (req, res) {
 
 const httpsServer = https.createServer(credentials, app);
 
-httpsServer.listen(8443, "192.168.1.6");
+httpsServer.listen(8443)
