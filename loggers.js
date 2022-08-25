@@ -3,9 +3,9 @@ const logger = bunyan.createLogger({
   name: 'todoApi',
   streams: [{
     type: 'rotating-file',
-    path: './info.log',
-    period: '1d',   // daily rotation
-    count: 3        // keep 3 back copies
+    path: './log/info.log',
+    period: '1d',
+    count: 3
   }]
 });
 
@@ -13,7 +13,7 @@ const morgan = require('morgan')
 const rfs = require("rotating-file-stream");
 const path = require('path')
 const accessLogStream = rfs.createStream('access.log', {
-  interval: '1d', // rotate daily
+  interval: '1d',
   path: path.join(__dirname, 'log')
 })
 const httpLogger = morgan('combined', { stream: accessLogStream })
