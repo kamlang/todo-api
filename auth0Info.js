@@ -77,7 +77,7 @@ async function getCurrentUserInfo(auth0Sub) {
 
     if (error.response.status == 401) {
       try {
-        log.log("Token has expired, getting a new one.")
+        log.error("Token has expired, getting a new one.")
         await getNewToken()
         await getCurrentUserInfo(auth0Sub)
       } catch (error) {
