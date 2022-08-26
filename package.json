@@ -12,6 +12,7 @@
   "license": "ISC",
   "dependencies": {
     "axios": "^0.27.2",
+    "bunyan": "^1.8.15",
     "cors": "^2.8.5",
     "dotenv": "^16.0.1",
     "express": "^4.18.1",
@@ -24,7 +25,6 @@
     "wait-port": "^0.3.0"
   },
   "devDependencies": {
-    "bunyan": "^1.8.15",
     "nodemon": "^2.0.16"
   }
 }
