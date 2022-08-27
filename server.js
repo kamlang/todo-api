@@ -11,7 +11,6 @@ const https = require('https');
 require('dotenv').config()
 
 const app = express()
-mongoose.connect(process.env.DATABASE_URL)
 waitPort({ host: process.env.DATABASE_HOST, port: 27017 })
   .then(mongoose.connect(process.env.DATABASE_URL))
 
