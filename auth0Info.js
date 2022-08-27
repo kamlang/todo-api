@@ -2,6 +2,7 @@ require('dotenv').config()
 const axios = require("axios").default;
 const { writeFile, readFile } = require("fs").promises;
 const { logger: log } = require('./loggers.js')
+
 async function getNewToken() {
 
   const options = {
@@ -31,22 +32,20 @@ async function getTokenFromFile() {
     return data.access_token
   } catch (error) {
     log.error(error)
-    throw new Error("Couldn't get token.json file.")
+    throw new Error(`Couldn't get ${process.env.TOKEN_FILE} file.`)
   }
 }
 
 async function getAccessToken() {
-  let accessToken
-
   try {
-    accessToken = await getTokenFromFile()
+    let accessToken = await getTokenFromFile()
     return accessToken
   } catch (error) {
     log.error(error)
   }
 
   try {
-    accessToken = await getNewToken()
+    let accessToken = await getNewToken()
     return accessToken
   } catch (error) {
     log.error(error)
@@ -55,14 +54,8 @@ async function getAccessToken() {
 }
 
 async function getCurrentUserInfo(auth0Sub) {
-  let accessToken
 
-  try {
-    accessToken = await getAccessToken()
-  } catch (error) {
-    log.error(error)
-    throw error
-  }
+  let accessToken = await getAccessToken()
 
   const options = {
     method: 'GET',
@@ -84,9 +77,10 @@ async function getCurrentUserInfo(auth0Sub) {
         log.error(error)
         throw error
       }
+    } else {
+      log.error(error)
+      throw new Error("Fetching User info failed.")
     }
-    log.error(error)
-    throw new Error("Fetching User info failed.")
   }
 }
 
