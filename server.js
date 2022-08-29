@@ -1,7 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 
-const getCurrentUserInfo = require('./auth0Info')
+const fetchCurrentUserInfo = require('./auth0Info')
 const { Task, TaskList, User } = require('./models')
 const { logger: log, httpLogger } = require('./loggers')
 const waitPort = require('wait-port');
@@ -32,18 +32,19 @@ const jwkcheck = jwt({
   algorithms: ['RS256']
 });
 
-app.use(httpLogger)
 app.use(jwkcheck)
-app.use(express.json())
-
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", process.env.ALLOWED_ORIGIN);
   res.header("Access-Control-Allow-Headers", "Authorization, Origin, X-Requested-With, Content-Type, Accept");
   res.header('Access-Control-Allow-Methods', 'GET, POST, PATCH, PUT, DELETE, OPTIONS')
   next();
-});
+})
+
+app.use(httpLogger)
+app.use(express.json())
 
 app.use((err, req, res, next) => {
+  log.error(err)
   if (err.name === "UnauthorizedError") {
     res.status(401)
     res.end()
@@ -56,15 +57,9 @@ app.use((err, req, res, next) => {
 
 async function getCurrentUser(req, res, next) {
   let auth0Sub = req.auth.sub
-  let currentUser
-  try {
-    currentUser = await User.findOne({ sub: auth0Sub })
-  } catch (error) {
-    res.status(500)
-    res.end()
-  }
+  let currentUser = await User.findOne({ sub: auth0Sub })
   if (!currentUser) {
-    log.info("User not found, creating it.")
+    log.info("User not found")
     try {
       currentUser = await createUser(auth0Sub)
     } catch (error) {
@@ -74,17 +69,18 @@ async function getCurrentUser(req, res, next) {
     }
   }
   res.currentUser = currentUser
-  next()
+  if (res.currentUser) next()
+  else throw new Error("CurrentUser is undefined")
 }
 async function createUser(auth0Sub) {
-
+  let userInfo
+  log.info("Creating new user...")
   try {
-    userInfo = await getCurrentUserInfo(auth0Sub)
+    userInfo = await fetchCurrentUserInfo(auth0Sub)
   } catch (error) {
     log.error(error)
     throw new Error("Stopping here couldn't get user info.")
   }
-
   try {
     let newUser = await User.create({
       sub: auth0Sub,
@@ -98,8 +94,6 @@ async function createUser(auth0Sub) {
     throw new Error("Creating user failed.")
   }
 }
-
-
 
 app.put('/task', getCurrentUser, async function (req, res) {
   try {
@@ -255,5 +249,4 @@ app.put('/project', getCurrentUser, async function (req, res) {
 })
 
 const httpsServer = https.createServer(credentials, app);
-
 httpsServer.listen(8443)
