@@ -1,9 +1,9 @@
 require('dotenv').config()
-const axios = require("axios").default;
+const axios = require("axios");
 const { writeFile, readFile } = require("fs").promises;
 const { logger: log } = require('./loggers.js')
 
-async function getNewToken() {
+async function fetchTokenAndWriteItToFile() {
 
   const options = {
     method: 'POST',
@@ -17,35 +17,39 @@ async function getNewToken() {
     }
   };
   try {
-    response = await axios.request(options)
-    await writeFile(process.env.TOKEN_FILE, JSON.stringify(response.data), 'utf8')
+    log.info("Requesting a new token from auth0.")
+    const response = await axios.request(options)
+    log.info("Writing new token to file.")
+    await writeFile(process.env.TOKEN_FILE, JSON.stringify(response.data), { flag: 'w' }, 'utf8')
   } catch (error) {
     log.error(error)
     throw new Error("Fetching new access token failed.")
   }
 }
 
-async function getTokenFromFile() {
+
+async function readTokenFromFile() {
   try {
+    log.info("Reading token from file...")
     let data = await readFile(process.env.TOKEN_FILE, 'utf8')
     data = JSON.parse(data)
     return data.access_token
   } catch (error) {
-    log.error(error)
-    throw new Error(`Couldn't get ${process.env.TOKEN_FILE} file.`)
+    throw new Error(`${process.env.TOKEN_FILE} not found.`)
   }
 }
 
 async function getAccessToken() {
   try {
-    let accessToken = await getTokenFromFile()
+    let accessToken = await readTokenFromFile()
     return accessToken
   } catch (error) {
     log.error(error)
   }
 
   try {
-    let accessToken = await getNewToken()
+    await fetchTokenAndWriteItToFile()
+    let accessToken = await readTokenFromFile()
     return accessToken
   } catch (error) {
     log.error(error)
@@ -53,7 +57,7 @@ async function getAccessToken() {
   }
 }
 
-async function getCurrentUserInfo(auth0Sub) {
+async function fetchCurrentUserInfo(auth0Sub) {
 
   let accessToken = await getAccessToken()
 
@@ -64,15 +68,16 @@ async function getCurrentUserInfo(auth0Sub) {
   };
 
   try {
+    log.info("Getting user info from auth0.")
     const response = await axios.request(options)
     return response.data
   } catch (error) {
 
     if (error.response.status == 401) {
       try {
-        log.error("Token has expired, getting a new one.")
-        await getNewToken()
-        await getCurrentUserInfo(auth0Sub)
+        log.info("Token has expired, getting a new one.")
+        await fetchTokenAndWriteItToFile()
+        await fetchCurrentUserInfo(auth0Sub)
       } catch (error) {
         log.error(error)
         throw error
@@ -84,4 +89,4 @@ async function getCurrentUserInfo(auth0Sub) {
   }
 }
 
-module.exports = getCurrentUserInfo
+module.exports = fetchCurrentUserInfo
