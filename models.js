@@ -47,7 +47,9 @@ taskListSchema.pre('deleteOne', { document: true }, async function (next) {
 const userSchema = new Schema({
   sub: {
     type: String,
-    required: true
+    required: true,
+    unique: true,
+    immutable: true
   },
   nickname: String,
   email: {
